@@ -125,18 +125,22 @@ static void BoardTryAddNode(Board *board, int a, int b)
 
 static void BoardDetectNodes(Board *b)
 {
-    for (int y = 0; y < b->height - 1; y++) {
-        for (int x = 0; x < b->width - 1; x++) {
+    for (int y = 0; y < b->height; y++) {
+        for (int x = 0; x < b->width; x++) {
             int i = BoardGet(b, x, y);
-            int j = BoardGet(b, x + 1, y);
-            int k = BoardGet(b, x, y + 1);
 
-            if (i != j) {
-                BoardTryAddNode(b, i, j);
+            if (x < b->width - 1) {
+                int j = BoardGet(b, x + 1, y);
+                if (i != j) {
+                    BoardTryAddNode(b, i, j);
+                }
             }
 
-            if (i != k) {
-                BoardTryAddNode(b, i, k);
+            if (y < b->height - 1) {
+                int k = BoardGet(b, x, y + 1);
+                if (i != k) {
+                    BoardTryAddNode(b, i, k);
+                }
             }
         }
     }
