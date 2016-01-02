@@ -147,11 +147,26 @@ static bool BoardFinished(Board *b, int *colors)
         int c1 = colors[p->a];
         int c2 = colors[p->b];
 
-        if (c1 == c2) {
+        if (c1 == 0 || c2 == 0 || c1 == c2) {
             return false;
         }
     }
+
     return true;
+}
+
+static bool BoardFailed(Board *b, int *colors)
+{
+    for (Node *p = b->nodes; p != NULL; p = p->next) {
+        int c1 = colors[p->a];
+        int c2 = colors[p->b];
+
+        if (c1 != 0 && c2 != 0 && c1 == c2) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static void BoardPrint(Board *b, int *colors)
@@ -176,6 +191,9 @@ static void BoardPrintDetail(Board *b)
     for (int i = 0; i < b->sign_count; i++) {
         printf("%c\n", b->map[i]);
     }
+
+    printf("--\n");
+    printf("sign_count: %d\n", b->sign_count);
 }
 
 static Board *ReadBoard()
@@ -291,6 +309,10 @@ static int **NextCandidates(Board *b, int *colors)
 
 static bool Solve(Board *b, int *colors, int *result)
 {
+    if (BoardFailed(b, colors)) {
+        return false;
+    }
+
     if (BoardFinished(b, colors)) {
         memcpy(result, colors, sizeof(int) * SIGN_MAX);
         return true;
