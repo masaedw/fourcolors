@@ -1,5 +1,6 @@
 #include <gc.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -264,7 +265,53 @@ static Board *ReadBoard()
 
 static void FillTrivial(Board *b, int *colors)
 {
-    
+    while (true) {
+        bool filled = false;
+
+        for (int i = 0; i < b->sign_count; i++) {
+            uint8_t bits = 0;
+            int s = b->map[i];
+
+            if (colors[s] != 0) {
+                continue;
+            }
+
+            for (Node *p = b->nodes; p != NULL; p = p->next) {
+                if (p->a == s) {
+                    bits |= 1 << (colors[p->b] - 1);
+                }
+                if (p->b == s) {
+                    bits |= 1 << (colors[p->a] - 1);
+                }
+            }
+
+            switch (bits) {
+            case 0b1110:
+                colors[s] = 1;
+                filled = true;
+                break;
+
+            case 0b1101:
+                colors[s] = 2;
+                filled = true;
+                break;
+
+            case 0b1011:
+                colors[s] = 3;
+                filled = true;
+                break;
+
+            case 0b0111:
+                colors[s] = 4;
+                filled = true;
+                break;
+            }
+        }
+
+        if (!filled) {
+            return;
+        }
+    }
 }
 
 typedef struct CandNode CandNode;
@@ -346,6 +393,12 @@ int main(int argc, char** argv)
         printf("------------------%d\n", i);
         BoardPrint(b, cs[i]);
     }
+    //*/
+
+    /*
+    FillTrivial(b, b->colors);
+    BoardPrint(b, b->colors);
+    return 0;
     //*/
 
     int *result = FC_Malloc(sizeof(int) * SIGN_MAX);
