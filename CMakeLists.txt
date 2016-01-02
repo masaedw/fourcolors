@@ -5,4 +5,4 @@ include_directories(/usr/local/include)
 link_directories(/usr/local/lib)
 
 add_executable(fourcolors main.c)
-#target_link_libraries(fourcolors gc)
+target_link_libraries(fourcolors gc)

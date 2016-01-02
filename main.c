@@ -1,9 +1,10 @@
+#include <gc.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
 
-#define FC_Malloc malloc
+#define FC_Malloc GC_MALLOC
 
 enum {
     Blue = 1,
@@ -216,6 +217,8 @@ static Board *ReadBoard()
 
 int main(int argc, char** argv)
 {
+    GC_INIT();
+
     Board *b = ReadBoard();
     BoardPrint(b);
     BoardPrintDetail(b);
