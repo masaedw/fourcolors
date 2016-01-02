@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -17,6 +18,7 @@ struct Node
 {
     int a;
     int b;
+    Node *next;
 };
 
 typedef struct Board Board;
@@ -32,7 +34,18 @@ struct Board
     int *map; // used chars
 
     int sign_count;
+
+    Node *nodes;
 };
+
+static Node *NodeNew(int a, int b)
+{
+    Node *n = FC_Malloc(sizeof(Node));
+    n->a = a;
+    n->b = b;
+    n->next = NULL;
+    return n;
+}
 
 #define SIGN_MAX 256
 
@@ -49,6 +62,8 @@ static Board *BoardNew(int width, int height)
 
     b->map = FC_Malloc(sizeof(int) * SIGN_MAX);
     bzero(b->map, sizeof(int) * SIGN_MAX);
+
+    b->nodes = NULL;
 
     return b;
 }
@@ -85,6 +100,47 @@ static void PrintDot(int color)
     printf("\033[%sm  \033[49m", c);
 }
 
+static bool BoardHasNode(Board *board, int a, int b)
+{
+    for (Node *p = board->nodes; p != NULL; p = p->next)
+    {
+        if ((p->a == a && p->b == b) ||
+            (p->a == b && p->b == a))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void BoardTryAddNode(Board *board, int a, int b)
+{
+    if (!BoardHasNode(board, a, b)) {
+        Node *n = NodeNew(a, b);
+        n->next = board->nodes;
+        board->nodes = n;
+    }
+}
+
+static void BoardDetectNodes(Board *b)
+{
+    for (int y = 0; y < b->height - 1; y++) {
+        for (int x = 0; x < b->width - 1; x++) {
+            int i = BoardGet(b, x, y);
+            int j = BoardGet(b, x + 1, y);
+            int k = BoardGet(b, x, y + 1);
+
+            if (i != j) {
+                BoardTryAddNode(b, i, j);
+            }
+
+            if (i != k) {
+                BoardTryAddNode(b, i, k);
+            }
+        }
+    }
+}
+
 static void BoardPrint(Board *b)
 {
     for (int y = 0; y < b->height; y++) {
@@ -93,6 +149,13 @@ static void BoardPrint(Board *b)
             PrintDot(c);
         }
         printf("\n");
+    }
+}
+
+static void BoardPrintDetail(Board *b)
+{
+    for (Node *p = b->nodes; p != NULL; p = p->next) {
+        printf("%c - %c\n", p->a, p->b);
     }
 }
 
@@ -146,6 +209,8 @@ static Board *ReadBoard()
     b->colors['k'] = Green;
     b->colors['i'] = Yellow;
 
+    BoardDetectNodes(b);
+
     return b;
 }
 
@@ -153,7 +218,6 @@ int main(int argc, char** argv)
 {
     Board *b = ReadBoard();
     BoardPrint(b);
-    printf("%d\n", b->sign_count);
+    BoardPrintDetail(b);
     return 0;
 }
-
