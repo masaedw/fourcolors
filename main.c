@@ -360,6 +360,15 @@ static int **NextCandidates(Board *b, int *colors)
 
 static bool Solve(Board *b, int *colors, int *result)
 {
+    static int count = 0;
+
+    FillTrivial(b, colors);
+
+    if (count % 100000 == 0) {
+        printf("----------%d\n", count);
+        BoardPrint(b, colors);
+    }
+
     if (BoardFailed(b, colors)) {
         return false;
     }
@@ -369,9 +378,8 @@ static bool Solve(Board *b, int *colors, int *result)
         return true;
     }
 
-    FillTrivial(b, colors);
-
     int **cs = NextCandidates(b, colors);
+    count++;
 
     for (int i = 0; cs[i] != NULL; i++) {
         if (Solve(b, cs[i], result)) {
