@@ -30,9 +30,9 @@ struct Board
     int height;
 
     int *body;
-    int *colors;
+    int *colors; // init colors
 
-    int *map; // used chars
+    int *map; // used signes (size is sign_count)
 
     int sign_count;
 
@@ -58,12 +58,11 @@ static Board *BoardNew(int width, int height)
     b->height = height;
 
     b->body = FC_Malloc(sizeof(int) * width * height);
+
     b->colors = FC_Malloc(sizeof(int) * SIGN_MAX);
     bzero(b->colors, sizeof(int) * SIGN_MAX);
 
-    b->map = FC_Malloc(sizeof(int) * SIGN_MAX);
-    bzero(b->map, sizeof(int) * SIGN_MAX);
-
+    b->map = NULL;
     b->nodes = NULL;
 
     return b;
@@ -142,11 +141,24 @@ static void BoardDetectNodes(Board *b)
     }
 }
 
-static void BoardPrint(Board *b)
+static bool BoardFinished(Board *b, int *colors)
+{
+    for (Node *p = b->nodes; p != NULL; p = p->next) {
+        int c1 = colors[p->a];
+        int c2 = colors[p->b];
+
+        if (c1 == c2) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void BoardPrint(Board *b, int *colors)
 {
     for (int y = 0; y < b->height; y++) {
         for (int x = 0; x < b->width; x++) {
-            int c = b->colors[BoardGet(b, x, y)];
+            int c = colors[BoardGet(b, x, y)];
             PrintDot(c);
         }
         printf("\n");
@@ -155,8 +167,14 @@ static void BoardPrint(Board *b)
 
 static void BoardPrintDetail(Board *b)
 {
+    printf("-- nodes --\n");
     for (Node *p = b->nodes; p != NULL; p = p->next) {
         printf("%c - %c\n", p->a, p->b);
+    }
+
+    printf("-- map --\n");
+    for (int i = 0; i < b->sign_count; i++) {
+        printf("%c\n", b->map[i]);
     }
 }
 
@@ -186,17 +204,28 @@ static Board *ReadBoard()
 
     Board *b = BoardNew(19, 19);
 
+    int *map = FC_Malloc(sizeof(int) * SIGN_MAX);
+    bzero(map, sizeof(int) * SIGN_MAX);
+
     for (int h = 0; h < b->height; h++) {
         for (int w = 0; w < b->width; w++) {
             int s = q[h * (b->width + 1) + w];
             BoardSet(b, w, h, s);
-            b->map[s] = 1;
+            map[s] = 1;
         }
     }
 
     b->sign_count = 0;
     for (int i = 0; i < SIGN_MAX; i++) {
-        b->sign_count += b->map[i];
+        b->sign_count += map[i];
+    }
+
+    b->map = FC_Malloc(sizeof(int) * b->sign_count);
+
+    for (int i = 0, j = 0; i < SIGN_MAX; i++) {
+        if (map[i] != 0) {
+            b->map[j++] = i;
+        }
     }
 
     b->colors['F'] = Green;
@@ -215,12 +244,95 @@ static Board *ReadBoard()
     return b;
 }
 
+static void FillTrivial(Board *b, int *colors)
+{
+    
+}
+
+typedef struct CandNode CandNode;
+
+struct CandNode
+{
+    int i;
+    CandNode *next;
+};
+
+static int **NextCandidates(Board *b, int *colors)
+{
+    int empty = 0;
+
+    CandNode *head = NULL;
+
+    for (int i = 0; i < b->sign_count; i++) {
+        if (colors[b->map[i]] == 0) {
+            CandNode *p = FC_Malloc(sizeof(CandNode));
+            p->i = b->map[i];
+            p->next = head;
+            head = p;
+            empty++;
+        }
+    }
+
+    int **cs = FC_Malloc(sizeof(int*) * (empty * 4 + 1));
+
+    int j = 0;
+    for (CandNode *p = head; p != NULL; p = p->next) {
+        for (int c = 1; c <= 4; c++) {
+            cs[j] = FC_Malloc(sizeof(int) * SIGN_MAX);
+            memcpy(cs[j], colors, sizeof(int) * SIGN_MAX);
+            cs[j][p->i] = c;
+            j++;
+        }
+    }
+    cs[j] = NULL;
+
+    return cs;
+}
+
+static bool Solve(Board *b, int *colors, int *result)
+{
+    if (BoardFinished(b, colors)) {
+        memcpy(result, colors, sizeof(int) * SIGN_MAX);
+        return true;
+    }
+
+    FillTrivial(b, colors);
+
+    int **cs = NextCandidates(b, colors);
+
+    for (int i = 0; cs[i] != NULL; i++) {
+        if (Solve(b, cs[i], result)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int main(int argc, char** argv)
 {
     GC_INIT();
 
     Board *b = ReadBoard();
-    BoardPrint(b);
+    BoardPrint(b, b->colors);
     BoardPrintDetail(b);
+
+    //*
+    int **cs = NextCandidates(b, b->colors);
+
+    for (int i = 0; cs[i] != NULL; i++) {
+        printf("------------------%d\n", i);
+        BoardPrint(b, cs[i]);
+    }
+    //*/
+
+    int *result = FC_Malloc(sizeof(int) * SIGN_MAX);
+    if (Solve(b, b->colors, result)) {
+        printf("solved!\n");
+        BoardPrint(b, result);
+    } else {
+        printf("failed\n");
+    }
+
     return 0;
 }
